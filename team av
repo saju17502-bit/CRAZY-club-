@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRAZY CLUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; user-select: none; }
+        .main-app { max-width: 450px; width: 100%; min-height: 100vh; margin: auto; position: relative; background: #fff; overflow-x: hidden; }
+        .hidden { display: none !important; }
+        
+        /* রেজিস্ট্রেশন ডিজাইন */
+        #p-auth { background: linear-gradient(to bottom, #ffcc33, #ff9900); min-height: 100vh; padding: 20px; }
+        .reg-card { background: #f8f9ff; border-radius: 30px; padding: 25px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .custom-input { width: 100%; padding: 14px 15px; border-radius: 12px; border: 1px solid #e2e8f0; outline: none; margin-bottom: 12px; font-size: 14px; }
+        .btn-reg { background: linear-gradient(to right, #ffd700, #ffa500); color: white; width: 100%; padding: 16px; border-radius: 30px; font-weight: 900; font-size: 18px; border: none; cursor: pointer; }
+
+        /* প্রোফাইল ও ব্যালেন্স */
+        .profile-header { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); padding: 40px 20px 60px; border-bottom-left-radius: 40px; border-bottom-right-radius: 40px; color: white; }
+        .balance-card { background: white; margin: -40px 20px 20px; border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; color: #1e293b; }
+        
+        /* গেম ডিজাইন */
+        .game-card { background: #1a1d29; border-radius: 35px; padding: 25px; color: white; position: relative; }
+        #lock-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: none; z-index: 100; border-radius: 35px; align-items: center; justify-content: center; font-weight: bold; color: #ff4d4d; backdrop-filter: blur(2px); font-size: 20px; }
+        
+        /* বেট পপআপ */
+        #bet-sheet { position: fixed; bottom: -100%; left: 50%; transform: translateX(-50%); width: 100%; max-width: 450px; background: white; border-top-left-radius: 40px; border-top-right-radius: 40px; transition: 0.4s ease; z-index: 2000; padding: 30px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); }
+        #bet-sheet.active { bottom: 0; }
+        
+        .trend-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+
+<audio id="snd-count" preload="auto"><source src="https://www.soundjay.com/buttons/button-50.mp3" type="audio/mpeg"></audio>
+
+<div class="main-app">
+    <div id="p-auth">
+        <div class="text-center text-white font-black text-2xl italic mb-6 uppercase">Crazy Club</div>
+        <div class="reg-card">
+            <p class="text-center text-orange-500 font-bold mb-4 uppercase">নতুন একাউন্ট খুলুন</p>
+            <input type="number" id="reg-ph" placeholder="ফোন নম্বর (১১ ডিজিট)" class="custom-input">
+            <input type="password" id="reg-ps" placeholder="পাসওয়ার্ড (কমপক্ষে ৮ ডিজিট)" class="custom-input">
+            <input type="password" id="reg-ps-confirm" placeholder="পাসওয়ার্ড নিশ্চিত করুন" class="custom-input">
+            <button onclick="handleSecureRegister()" class="btn-reg shadow-lg">নিবন্ধন করুন</button>
+        </div>
+    </div>
+
+    <div id="p-lobby" class="hidden">
+        <div class="profile-header">
+            <div class="flex items-center gap-4">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lucky" class="w-16 h-16 rounded-full border-4 border-white/20 bg-white">
+                <div>
+                    <h3 class="font-bold text-lg" id="display-name">MEMBER_XXXX</h3>
+                    <p class="text-xs opacity-80">UID | 352344 📋</p>
+                </div>
+            </div>
+        </div>
+        <div class="balance-card">
+            <p class="text-xs text-gray-400 font-bold uppercase mb-1">আপনার ব্যালেন্স</p>
+            <h2 class="text-4xl font-black text-slate-800">৳ <span id="bal-text">0.00</span></h2>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 px-5 mb-6">
+            <div onclick="showP('dep')" class="bg-white p-4 rounded-2xl text-center shadow-sm cursor-pointer border hover:bg-gray-50">📥 <p class="text-xs font-bold mt-1">DEPOSIT</p></div>
+            <div onclick="showP('wit')" class="bg-white p-4 rounded-2xl text-center shadow-sm cursor-pointer border hover:bg-gray-50">📤 <p class="text-xs font-bold mt-1">WITHDRAW</p></div>
+        </div>
+
+        <div class="mx-5 bg-white p-6 rounded-3xl shadow-sm border border-indigo-50 flex justify-between items-center cursor-pointer" onclick="showP('main')">
+            <div class="flex items-center gap-4">
+                <div class="text-4xl">💎</div>
+                <div><h4 class="font-black text-slate-800">WinGo 1Min</h4><p class="text-[10px] text-indigo-500 font-bold">অফিসিয়াল গেম</p></div>
+            </div>
+            <span>❯</span>
+        </div>
+    </div>
+
+    <div id="p-dep" class="hidden min-h-screen bg-white">
+        <div class="p-4 border-b flex items-center font-bold"><span onclick="showP('lobby')" class="mr-4 text-xl cursor-pointer">❮</span> টাকা জমা দিন</div>
+        <div class="p-6">
+            <div class="bg-indigo-50 p-5 rounded-3xl mb-6 space-y-4">
+                <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm">
+                    <span class="font-bold text-gray-700">বিকাশ: 01887817151</span>
+                    <button onclick="copyToClipboard('01887817151')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs">কপি</button>
+                </div>
+                <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm">
+                    <span class="font-bold text-gray-700">নগদ: 01333128820</span>
+                    <button onclick="copyToClipboard('01333128820')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs">কপি</button>
+                </div>
+            </div>
+            <input type="number" placeholder="টাকার পরিমাণ" class="custom-input">
+            <input type="text" placeholder="ট্রানজেকশন আইডি" class="custom-input">
+            <button onclick="alert('ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!')" class="btn-reg">সাবমিট করুন</button>
+        </div>
+    </div>
+
+    <div id="p-wit" class="hidden min-h-screen bg-white">
+        <div class="p-4 border-b flex items-center font-bold"><span onclick="showP('lobby')" class="mr-4 text-xl cursor-pointer">❮</span> টাকা উত্তোলন</div>
+        <div class="p-6">
+            <label class="text-xs font-bold text-gray-400">উত্তোলনের পরিমাণ (মিনিমাম ৫০০)</label>
+            <input type="number" id="wit-amt" placeholder="৳ 0.00" class="custom-input mt-1">
+            <label class="text-xs font-bold text-gray-400">আপনার মোবাইল নম্বর</label>
+            <input type="number" id="wit-ph" placeholder="01XXXXXXXXX" class="custom-input mt-1">
+            <button onclick="alert('উইথড্র রিকোয়েস্ট পেন্ডিং আছে!')" class="btn-reg bg-rose-500 mt-4">উইথড্র রিকোয়েস্ট</button>
+        </div>
+    </div>
+
+    <div id="p-main" class="hidden min-h-screen bg-slate-50">
+        <div class="p-4 bg-white flex items-center shadow-sm sticky top-0 z-50">
+            <span onclick="showP('lobby')" class="text-2xl font-bold text-indigo-600 mr-4 cursor-pointer">❮</span>
+            <span class="font-black text-slate-800">WinGo 1Min</span>
+        </div>
+        <div class="p-5">
+            <div class="game-card mb-6 shadow-xl">
+                <div id="lock-overlay">🚫 বেটিং বন্ধ</div>
+                <div class="flex justify-between items-center">
+                    <div><p class="text-[10px] text-indigo-300 font-bold">পিরিয়ড</p><h4 id="period-id" class="text-xl font-mono">----</h4></div>
+                    <div class="text-right"><p class="text-[10px] opacity-50 font-bold">সময়</p><h4 id="timer" class="text-5xl font-black text-indigo-400">00:00</h4></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <button onclick="openBet('Green')" class="py-3 bg-emerald-500 text-white rounded-xl font-bold">Green</button>
+                <button onclick="openBet('Violet')" class="py-3 bg-fuchsia-500 text-white rounded-xl font-bold">Violet</button>
+                <button onclick="openBet('Red')" class="py-3 bg-rose-500 text-white rounded-xl font-bold">Red</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <button onclick="openBet('Big')" class="py-5 bg-indigo-600 text-white rounded-2xl font-black text-2xl">BIG</button>
+                <button onclick="openBet('Small')" class="py-5 bg-slate-400 text-white rounded-2xl font-black text-2xl">SMALL</button>
+            </div>
+            <div class="bg-white rounded-3xl overflow-hidden shadow-sm border"><table class="w-full trend-table"><tbody id="analysis-body"></tbody></table></div>
+        </div>
+    </div>
+
+    <div id="bet-sheet">
+        <div class="flex justify-between items-center mb-6"><h3 class="text-2xl font-black">বেট: <span id="bt-display" class="text-indigo-600">--</span></h3><span onclick="closeBet()" class="text-3xl text-gray-300">×</span></div>
+        <input type="number" id="b-amt" value="10" class="w-full text-5xl font-black border-b-4 border-indigo-50 mb-8 outline-none text-center text-indigo-600">
+        <button onclick="confirmBet()" class="btn-reg">বেট নিশ্চিত করুন</button>
+    </div>
+</div>
+
+<script>
+    let userData = { phone: '', balance: 0.00 };
+
+    function copyToClipboard(text) {
+        const el = document.createElement('textarea');
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        alert("নম্বর কপি হয়েছে: " + text);
+    }
+
+    function handleSecureRegister() {
+        const ph = document.getElementById('reg-ph').value;
+        const ps = document.getElementById('reg-ps').value;
+        const psc = document.getElementById('reg-ps-confirm').value;
+
+        if(ph.length !== 11) return alert("মোবাইল নম্বর অবশ্যই ১১ ডিজিট হতে হবে!");
+        if(ps.length < 8) return alert("পাসওয়ার্ড কমপক্ষে ৮ ডিজিট হতে হবে!");
+        if(ps !== psc) return alert("পাসওয়ার্ড দুটি মেলেনি!");
+
+        userData.phone = ph;
+        localStorage.setItem('tigro_pro_v1', JSON.stringify(userData));
+        init();
+    }
+
+    function init() {
+        const saved = localStorage.getItem('tigro_pro_v1');
+        if(saved) {
+            userData = JSON.parse(saved);
+            document.getElementById('p-auth').classList.add('hidden');
+            document.getElementById('p-lobby').classList.remove('hidden');
+            document.getElementById('display-name').innerText = "MEMBER_" + userData.phone.slice(-4);
+            document.getElementById('bal-text').innerText = userData.balance.toFixed(2);
+            fetchData();
+        }
+    }
+
+    function showP(p) {
+        document.querySelectorAll('[id^="p-"]').forEach(el => el.classList.add('hidden'));
+        document.getElementById('p-'+p).classList.remove('hidden');
+    }
+
+    function openBet(t) {
+        // টাকা না থাকলে অ্যালার্ট এবং ডিপোজিট অপশন
+        if(userData.balance < 1) {
+            alert("দুঃখিত বস! আপনার ব্যালেন্স পর্যাপ্ত নয়। গেম খেলতে আগে ডিপোজিট করুন।");
+            showP('dep');
+            return;
+        }
+        document.getElementById('bt-display').innerText = t;
+        document.getElementById('bet-sheet').classList.add('active');
+    }
+
+    function closeBet() { document.getElementById('bet-sheet').classList.remove('active'); }
+
+    function confirmBet() {
+        let amt = parseFloat(document.getElementById('b-amt').value);
+        if(amt > userData.balance) {
+            alert("আপনার ব্যালেন্স কম! টাকা জমা দিন।");
+            closeBet();
+            showP('dep');
+            return;
+        }
+        userData.balance -= amt;
+        document.getElementById('bal-text').innerText = userData.balance.toFixed(2);
+        localStorage.setItem('tigro_pro_v1', JSON.stringify(userData));
+        alert("বেট ধরা সফল হয়েছে!");
+        closeBet();
+    }
+
+    async function fetchData() {
+        try {
+            const res = await fetch("https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json?ts=" + Date.now());
+            const json = await res.json();
+            const list = json.data.list;
+            document.getElementById('period-id').innerText = list[0].issueNumber.toString().slice(-4);
+            const html = list.slice(0, 15).map(i => {
+                const n = parseInt(i.number);
+                return `<tr><td>${i.issueNumber.toString().slice(-4)}</td><td class="text-xl text-indigo-600">${n}</td><td class="${n>=5?'text-orange-500':'text-blue-500'}">${n>=5?'Big':'Small'}</td></tr>`;
+            }).join('');
+            document.getElementById('analysis-body').innerHTML = html;
+        } catch(e) {}
+    }
+
+    setInterval(() => {
+        let s = 60 - new Date().getSeconds();
+        document.getElementById('timer').innerText = "00:" + (s < 10 ? '0'+s : s);
+        if(s <= 5) {
+            document.getElementById('lock-overlay').style.display = 'flex';
+            document.getElementById('snd-count').play();
+        } else {
+            document.getElementById('lock-overlay').style.display = 'none';
+        }
+        if(s === 59) fetchData();
+    }, 1000);
+
+    window.onload = init;
+</script>
+</body>
+</html>
